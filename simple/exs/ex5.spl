@@ -1,0 +1,11 @@
+program
+m = 0;
+x = 0;
+read m;
+if (m > 0) {
+  while (x < m) {
+    print x;
+    x = x + 1;
+  }
+}
+end

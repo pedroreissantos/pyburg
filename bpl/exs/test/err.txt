@@ -1,0 +1,9 @@
+../bubble
+../convert
+../lower
+../printf
+../r
+../snide
+../strcp
+../testfit
+../z

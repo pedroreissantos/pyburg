@@ -1,0 +1,531 @@
+<html>
+<head>
+<title>Compiler construction and code generation in python with ply and pyburg</title>
+</head>
+<BODY BGCOLOR="B5BDD6" link=red vlink=green>
+
+<h1>Compiler construction and code generation in python with ply and pyburg</h1>
+
+<b>
+Pedro Reis dos Santos<br>
+University of Lisboa<br>
+(C)IST, 2020<br>
+</b>
+
+<div class="sectiontoc">
+<ul>
+<li><a href="#intro">Introduction</a></li>
+<li><a href="#over">Overview</a></li>
+<li><a href="#scan">Lexical analysis</a></li>
+<li><a href="#ast">Abstract syntax tree</a></li>
+<li><a href="#gram">Syntactical analysis</a></li>
+<li><a href="#postfix">Postfix code generation</a></li>
+<li><a href="#code">Code selection</a></li>
+<li><a href="#example">Example execution</a></li>
+<li><a href="#spec">File specification</a></li>
+</ul>
+
+<H2><a name="intro"></a>1. Introduction</H2>
+Modern compiler construction usually relies on tools to ease and speed up the
+compiler development. Traditional tools for lexical and sintactical analysis
+are <i>lex</i> and <i>yacc</i>, developed for C-like languages.
+<p>
+The lex tool uses a regular grammar to describe the language description and
+break it into tokens. Irrelevant input, such as comments or blanks, is ignored
+and produces no tokens.
+<p>
+The yacc tool parses the tokens with a context free grammar using a
+LALR(1) algorithm. If the input file can be reduced into the grammar
+target symbol the input is correct according to the grammar, otherwise an
+error is generated.
+<p>
+To provide a more useful output to the parsing procedure
+than a boolean result, an abstract syntax tree (AST) can be constructed.
+The AST is an in memory representation of the input that can be used to
+generate machine code.
+<p>
+Modern instruction selection tools associate AST chunks according to a
+target processor instruction description.
+Bottom-Up Rewrite Grammars (<i>burg</i>) tools provide optimal instruction
+selection by perform a double-pass on an AST.
+
+<H2><a name="over"></a>2. Overview</H2>
+
+Compiler construction in python can be achieved using the <b>ply</b> package,
+for <i>lex</i> and <i>yacc</i> analysis, and the <b>pyburg</b> package, for
+<i>burg</i> code selection. The packages can be installed using the
+<tt>python -m pip</tt> command (or just <tt>pip</tt>).
+<p>
+Both packages rely on the same principle: you define a set of predefined
+variable values and a set of routines. The relevant routines must all begin
+with the same prefix, <tt>t_</tt> for <i>lex</i>, and the packages scan the
+given module to detect them. Each of these routines must provide a
+document string (or docstring) containing the grammar expression the
+routine processes. Unlike <i>lex</i> or <i>yacc</i> where tokens are integer
+values, in <b>ply</b> tokens are strings. 
+<p>
+In order to illustrate the complete process, a trivial programming language
+is used. The language provides declarations of global variables bound to
+character string or integer literals.
+Only the integer arithmetic addition expression is provided.
+The values of both types an be printed by a variable argument <tt>print</tt>
+statement. For example:
+<pre>
+x = 12;
+y = 45;
+s = " = ";
+{
+  print "x", s, x;
+  print "y", s, y;
+  print "x+y", s, x+y;
+  print "x+y+7", s, x+y+7;
+  print "dozen = ", 5+7;
+}
+</pre>
+
+<H3><a name="scan"></a>3 Lexical analysis</H3>
+
+The lexical analysis is performed by the <tt>ply.lex</tt> routine.
+Previously, the variables <tt>reserved</tt>, <tt>tokens</tt> and
+<tt>literals</tt> must be set. In the current example:
+<pre>
+reserved = { 'print' : 'PRINT', }
+tokens = [ 'ID', 'STR', 'INT' ] + list(reserved.values())
+literals = "{}+=;,"
+</pre>
+The dictionary <tt>reserved</tt> defines as keys all the language
+reserved keyword and provides as the respective values the token
+identifier. The <tt>tokens</tt> list defines all tokens, including
+the reserved keyword. As in <i>yacc</i>, single character tokens, such
+as separators or terminators, can be defined in a <tt>literals</tt>
+string.
+<p>
+Tokens that require non-trivial regular expression descriptions, or
+require special processing, must be defined in <tt>b_</tt> prefixed routines.
+The <tt>ID</tt>, <tt>STR</tt> and <tt>INT</tt> are such tokens.
+A <tt>t_ID</tt> routine must be provided for the <tt>ID</tt> token:
+<pre>
+def t_ID(t):
+	r'[A-Za-z][A-Za-z0-9_]*'
+	t.type = reserved.get(t.value,'ID')
+	return t
+
+def t_STR(t):
+	r'\"[^\"]*\"'
+	return t
+
+def t_INT(t):
+	r'\d+'
+	t.value = int(t.value)
+	return t
+</pre>
+the docstring defines an identifier as letter followed by zero or more
+letters or digits (or underscore). The return value, the token type, is
+<tt>ID</tt> if the argument value is not a reserved keyword, or the
+dictionary value otherwise.
+The <tt>t_STR</tt> returns the literal string as is, a any non inverted comma
+within inverted commas, and <tt>t_INT</tt> converts a string of one or more
+decimal digits into an integer.
+<p>
+Regular expressions that produce no tokens must also be provided as rotines:
+<pre>
+def t_COMMENT(t):
+	r'\/\/.*'
+	pass # No return value. Token discarded
+
+# Define a rule so we can track line numbers
+def t_newline(t):
+	r'\n+'
+	t.lexer.lineno += len(t.value)
+
+# A string containing ignored characters (spaces and tabs)
+t_ignore = ' \t'
+</pre>
+
+Finnally, an error routine handles the reporting of lexical errors:
+<pre>
+def t_error(t):
+	print("line", t.lineno, ": illegal character '%s'" % t.value[0])
+	t.lexer.skip(1)
+</pre>
+
+<H3><a name="ast"></a>4 abstract syntax tree</H3>
+
+Any package that provides binary tree can be used to describe de
+abstract syntax tree (AST). In the current example the <tt>pyburg.Tree</tt>
+class is used. It provides each tree node with a label, the token.
+The leaf nodes are built according to the stored data type: <tt>NilNode</tt>
+for no data, <tt>IntNode</tt> for integer values and <tt>StrNode</tt> for
+character string values.
+Binary nodes <tt>BinNode</tt> and unary nodes <tt>UniNode</tt> on accept
+<tt>pyburg.Tree</tt> object instances as arguments. Since the BURG selection
+tools only accept binary trees (at most) no other tree types are required.
+
+<H3><a name="gram"></a>5 Syntactical analysis</H3>
+The syntactical analysis is performed by the <tt>ply.yacc</tt> routine.
+As with the <i>yacc</i> tool, operator precedence can be defined on ambigous
+grammars using <tt>left</tt>, <tt>right</tt> or <tt>nonassoc</tt> associative
+declarations, for instance:
+<pre>
+precedence = [('left', '+', '-'),
+              ('left', '*', '/', '%')]
+</pre>
+the current example language, however,
+only uses the left associative aditive operator:
+<pre>
+precedence = [('left', '+')]
+</pre>
+
+A <tt>tokens</tt> variable must also be defined, unless the <tt>tokens</tt>
+variable already defined in the scanner is used. The variable describes all
+terminal symbols in the parser grammar.
+<p>
+As with <b>yacc</b>, the grammar is a set of rules and associated code that
+is executed when the rule is matched.
+In a <b>ply</b> based grammar description each rule action is defined with
+a <tt>p_</tt> prefixed function and an associated grammar rule as a
+docstring.
+<p>
+The first rule, the one that produces the target non-terminal symbol
+<tt>file</tt>, is defined as declarations followed by brace delimited
+instructions: <a name="file">
+<pre>
+def p_file_1(p):
+	'''file : decls '{' instrs '}' '''
+	p[0] = BinNode('PROG', p[1], p[3])
+</pre>
+The AST root node, labeled <tt>PROG</tt>, has two branches (declarations and
+instructions), the braces are omited.
+The rules are identified by is position, as in <b>yacc</b> (<tt>$1</tt> for
+the first symbol in the right hand side), but are represented in the list
+argument.
+The left hand side non-terminal is <tt>p[0]</tt> (<tt>$$</tt>), since the
+function argument was declared as <tt>p</tt>.
+<p>
+In order to represent "zero or more declarations" a left recursion is used
+in conjuntion with an empty rule.
+The empty rule build an AST <tt>NIL</tt> labeled leaf node.
+The recursion uses an AST with two branches, one for the repetition and
+another for the actual declaration, labeled <tt>DECLS</tt>:
+<pre>
+def p_decls_1(p):
+	'''decls : '''
+	p[0] = NilNode('NIL')
+
+def p_decls_2(p):
+	'''decls : decls decl'''
+	p[0] = BinNode('DECLS', p[1], p[2])
+</pre>
+
+The declaration of a string variable is a bit more complex.
+The AST for this rule must include two strings, the variable name and its
+initialized value. Since branches must be of the <tt>Tree</tt> type, the
+strings must first be converted into leaf string nodes (<tt>StrNode</tt>).
+Then an attribute, named <tt>info</tt>, is associated with the AST node in
+order to provide language type information, a string (<tt>STR</tt>) in this
+case.
+The <tt>setattr</tt> function dynamically inserts an attribute into the AST
+node object.
+Finally, the declared valiable (<tt>ID</tt>) is inserted into a symbol table
+(<tt>tabid</tt>).
+The symbol table is a python dictionary associating the declared variable
+name with its type (<tt>STR</tt>):
+<pre>
+def p_decl_1(p):
+	'''decl : ID '=' STR ';' '''
+	p[0] = BinNode('SET', StrNode('ID', p[1]), StrNode('STR', p[3]))
+	setattr(p[0].left(), 'info', 'STR')
+	tabid[p[1]] = 'STR'
+</pre>
+
+The remaining rules follow the same principle.
+The add expression must verify the language type of its arguments, since
+only integers can be added.
+To perform such semantic checking, the <tt>info</tt> attribute is tested,
+previously inserted into the AST node with <tt>setattr</tt>.
+The result of an add expression is always an integer, so this node is
+assigned a language type <tt>INT</tt>:
+<pre>
+def p_expr_3(p):
+	'''expr : expr '+' expr'''
+	p[0] = BinNode('ADD', p[1], p[3])
+	if p[1].info == 'STR' or p[3].info == 'STR':
+		raise RuntimeError("only integers can be added")
+	setattr(p[0], 'info', 'INT')
+</pre>
+
+As with the scanner, an error routine can be supplied to report syntax errors
+in grammar processing during parsing:
+<pre>
+def p_error(p):
+	print("line", p.lineno, ": syntax error at or before", p.type, "=", p.value)
+</pre>
+
+The parsing result is an error, on a syntactic (<tt>p_error</tt>) or semantic
+(<tt> raise RuntimeError</tt>) error, or a valid AST tree.
+The tree should contain all relevant information, including type information,
+required by code generation.
+Before the code is generated, the tree can be printed in order to check wether
+code can be generated with the information contained in the tree nodes.
+
+<H3><a name="postfix"></a>6 Postfix code generation</H3>
+
+Register optimization can result in significant performance gains and the 
+number of available processor registers has been increasing over the years.
+However, a simple code generation procedure can use only two or three registers
+and saving most data on the stack. This removes register alocation from the
+code generation procedure and enables code selection to produce final code.
+The resulting code is almost as performant as when using a large register set,
+since most of the stack will be stored in primary cache, except for vector
+or structure indexing where a significant performance degradation is expected.
+<p>
+The <tt>pyburg.postfix</tt> package provides code generation macros for
+<b>intel</b> <i>32-bit</i> and <i>64-bit</i> architectures, as well as
+<b>arm</b> <i>32-bit</i> architecture.
+In the <i>32-bit</i> <b>intel</b> architecture <tt>postfix</tt> uses most
+registers, since only 7 are available and each one has a specific usage 
+as in a RISC architecture.
+<tt>postfix</tt> code generation for other architectures uses only a small
+register subset.
+<p>
+The <tt>postfix</tt> macros are dictionaries, one for each architecture and
+assembler format:
+<ul>
+<li><tt>pyburg.postfix.arm</tt> for <i>32-bit</i> <b>arm</b> assembler output;</li>
+<li><tt>pyburg.postfix.amd64</tt> for <i>64-bit</i> <b>intel</b> assembler output;</li>
+<li><tt>pyburg.postfix.x64</tt> for <i>64-bit</i> <b>AT&amp;T</b> assembler output;</li>
+<li><tt>pyburg.postfix.i386</tt> for <i>32-bit</i> <b>intel</b> assembler output;</li>
+<li><tt>pyburg.postfix.i386gas</tt> for <i>32-bit</i> <b>AT&amp;T</b> assembler output;</li>
+<li><tt>pyburg.postfix.debug</tt> for code generation debug;</li>
+<li><tt>pyburg.postfix.num</tt> for bytecode generation.</li>
+</ul>
+For a dynamic selection of the code generation architecture, the
+<tt>pyburg.postfix.pf</tt> dictionary can be used.
+<pre>
+pf = {  'debug': debug, 'num': num, 'arm': arm, 'amd64': amd64,
+        'i386gas': i386gas, 'i386': i386, 'x64': x64 }
+</pre>
+
+The dictionary keys correspond to the <tt>postfix</tt> target instructions
+that are converted into machine code instructions strings dictionary values.
+In order to add two integers, for instance <tt>12+34</tt>:
+<pre>
+from pyburg.postfix import arm
+print(arm['IMM'] % 12, arm['IMM'] % 34, arm['ADD'])
+</pre>
+the result is stored on the top of the stack and can be printed by calling
+the appropriate routine:
+<pre>
+print(arm['CALL'] % 'printi', arm['EXTRN'] % 'printi')
+</pre>
+The <tt>postfix</tt> operation, or dictionary keys, are explained in the
+<a href="postfix.html">postfix reference</a>.
+
+<H3><a name="code"></a>7 Code selection</H3>
+
+Code selection is the first step on code generation.
+Using a code generation tool, such as BURG selection tools, an optimal code
+selction can be achieved, That is, the total cost of all generated
+instructions is minimal.
+The cost of each rules can be expressed as execution cicles of the generated
+instructions, or any other metric, and the tool globaly minimizes such cost.
+<p>
+Once target machine instructions have been selected, registers can be assigned
+to each instruction. However, if no registers are available at a certain point
+aditional instructions must be inserted.
+<p>
+Although the <b>pyburg</b> code generation tool can be used to generate
+instruction for subsequent register alocation, in this tutorial
+<tt>postfix</tt> is used.
+Therefore final machine code is generated and register alocation is necessary.
+<p>
+Using the same principle as <b>ply</b>, <b>pyburg</b> grammars use <tt>b_</tt>
+prefixed routines for rule action code and the associated docstring for
+rule description.
+<p>
+Additional information on the <b>pyburg</b> specification and code
+slection grammar rules is available at the <a href="pyburg.html">pyburg
+reference</a>.
+<p>
+The <tt>goal</tt> and <tt>terminals</tt> variables must be defined.
+The <tt>goal</tt> is set to the grammar start symbol and the <tt>terminals</tt>
+variable must contain all AST node labels used.
+<pre>
+goal = 'prog'
+terminals = ('ADD', 'SET', 'PROG', 'DECLS', 'NIL', 'INSTRS', 'EXPR') + tuple(tokens)
+</pre>
+
+The target language is defined as a set of integer or string variable
+declarations followed by a set of print instructions.
+Each print instruction accepts a variable number of string or integer
+expressions.
+The string expressions are only string literals or string variables.
+The integer expressions can use integer literals or variables that can be added.
+<p>
+The target (<tt>goal</tt>) rule corresponds to AST root node.
+The AST root node, labeled <tt>PROG</tt> (see parser
+<a href="#file">p_file_1</a> rule), has two branches:
+the left branch describes de declarations, while the right node describes
+de instructions.
+If both branches were successfuly selected the rule reduces to a <b>prog</b>
+non-terminal and the code is generated.
+The rule has a cost <b>4</b> since four <tt>postfix</tt> instructions are
+generated (<tt>IMM POP LEAVE RET</tt>).
+The instructions perform a function return on the target language, using the
+immediate <tt>0</tt> as a return value.
+<pre>
+def b_prog_1(n,pf,out):
+        ''' prog : PROG(decls,instrs) 4 '''
+        print((pf['IMM']+pf['POP']+pf['LEAVE']+pf['RET']) % 0, file=out)
+</pre>
+The routine arguments are the tree node <tt>n</tt>, the <tt>postfix</tt>
+code generation dictionary, and the output file <tt>out</tt>.
+<p>
+The startup code for the target language function <tt>_main</tt> is
+generated by the first reduced rule, that is the empty instructions rule
+since instructions are left recursive in the parsing grammar.
+The cost is <b>1</b> since only the <tt>START</tt> <b>postfix</b> operation
+produces executable code. All other operations are assembler declarations.
+The <tt>START</tt> operation builds a function frame to contain local values
+and is later removed by the <tt>LEAVE</tt> operation.
+<pre>
+def b_instrs_1(n,pf,out):
+        ''' instrs : NIL 1 '''
+        print((pf['TEXT']+pf['ALIGN']+pf['GLOBL']+pf['LABEL']+pf['START']) % ("_main", pf['FUNC'], "_main"), file=out)
+</pre>
+
+An integer literal expression pushes an immediate value to the stack with a
+<tt>IMM</tt> operation:
+<pre>
+def b_expr_2(n,pf,out):
+        ''' expr : INT 1 '''
+        print(pf['IMM'] % n.value(), file=out)
+</pre>
+
+The adition pops two expressions (<tt>expr</tt>) from the stack and pushes
+the result back:
+<pre>
+def b_expr_3(n,pf,out):
+        ''' expr : ADD(expr,expr) 1 '''
+        print(pf['ADD'], file=out)
+</pre>
+
+All the code can be generated by selecting a single AST node label on each
+rule. This approaches reduces the code selection to <b>visitor</b> pattern.
+However, an instruction selection tool can compare code generation alternatives
+and select the lowest cost for a given tree.
+If the addition operation is performed on two literal, for example, the
+adition can be performed on compile time, that is a <i>constant folding</i>
+optimization.
+The cost of adding two integers, using the two rules descibed above, is
+<b>3</b>: <b>1</b> for each literal (<tt>b_expr_2</tt>) and <b>1</b> for
+the <tt>ADD</tt> instruction (<tt>b_expr_3</tt>).
+The rule pattern <b>ADD(INT,INT)</b> can be selected when the node labeled
+<tt>ADD</tt> contains two <tt>INT</tt> labeled branches.
+With a cost of <b>1</b>, since only an <tt>IMM</tt> instruction is generated,
+the rule is selected:
+<pre>
+def b_expr_4(n,pf,out):
+        ''' expr : ADD(INT,INT) 1 '''
+        print(pf['IMM'] % (n.left().value() + n.right().value()), file=out)
+</pre>
+note that if one of the <tt>ADD</tt> branches is an <tt>ID</tt> branch, the
+pattern is not matched and an the <tt>ADD</tt> instruction (<tt>b_expr_3</tt>)
+must be generated.
+<p>
+Literal strings must be stored in a <b>read-only data segment</b> and a pointer
+to the first byte loaded into the stack: a <b>char*</b> in the <b>C</b>
+programming language.
+Each new string is assigned a new label and a global label counter
+(<tt>lbl</tt>) is used to generate <tt>L_</tt> prefixed label.
+Thus a string literal (<tt>STR</tt>) produces a string expression (<tt>str</tt>)
+by pushing its pointer to the stack:
+<pre>
+def b_str_2(n,pf,out):
+        ''' str : STR 0 '''
+        global lbl
+        lbl += 1
+        print((pf['RODATA']+pf['ALIGN']+pf['LABEL']+pf['STR']+pf['TEXT']+pf['ADDR']) % ( "_L"+str(lbl), n.text()[1:-1], "_L"+str(lbl)), file=out)
+</pre>
+
+In the target language declaration section string and integer variables can
+be declared and initialized.
+When this variables are accessed in the instruction section, the generated
+code depends on the variables type: a pointer is pushed to the stack for
+string while for an integer variable its value is loaded.
+The selection tool uses the same cost based for all rules, but in this case
+the node label is <tt>ID</tt> in both cases (an alternative is to used
+different labels for each data type).
+A variables cost procedure can be adopted.
+The selection tool invoques a programmer given routine to determine the cost
+of a given node. The programmer supplied routine receive the node and returns
+a cost.
+For an <tt>ID</tt> node, the node type or a symbol table can be looked-up.
+If the symbol is of the required type, a low cost is returned.
+Otherwise a high cost is returned forcing the selection tool to look for
+other code selection alternatives.
+<pre>
+def b_str_1(n,pf,out):
+        ''' str : ID isSTR '''
+        print(pf['ADDR'] % n.text(), file=out)
+
+def b_expr_1(n,pf,out):
+        ''' expr : ID isINT '''
+        print(pf['ADDRV'] % n.text(), file=out)
+</pre>
+
+Based on node type information previously stored by the parser, the
+variable cost routines return a cost of <b>1</b> when the identifier
+is of the requested type and <b>1000</b> otherwise.
+<pre>
+def isSTR(p):
+        return 1 if p.info == 'STR' else 1000
+
+def isINT(p):
+        return 1 if p.info == 'INT' else 1000
+</pre>
+
+<H2><a name="example"></a>8. Example execution</H2>
+
+When the specification is complete, examples can be used to produce machine code assembly files.
+
+<ol>
+<li>
+Load the input file:
+<pre>
+with open(filename, 'r') as file: data = file.read()
+</pre>
+</li><li>
+Build the AST:
+<pre>
+tree = ply.yacc.yacc().parse(data, lexer=ply.lex.lex())
+</pre>
+</li><li>
+Generate the code:
+<pre>
+pyburg.run(tree, user=postfix.arm, output=sys.stdout)
+</pre>
+</li>
+</ol>
+The generated assembly file must then be assembled and loaded with a runtime library (see <a href="https://github.com/pedroreissantos/B-programming-language">B programming language</a>).
+<p>
+In order to debug the scanner (lexical analysis tool) all tokens can be printed with:
+<pre>
+        with open(filename, 'r') as file:
+                data = file.read()
+        lexer = lex.lex(debug=True)
+        lexer.input(data)
+        for t in lexer:
+                print(t)
+</pre>
+
+The debug mode of the parser (syntactic analysis tool) is also activated with <tt>debug=True</tt> argument for the <tt>parse</tt> routine above and print the AST.
+<p>
+The debug level of <b>pyburg</b> can be controlled by setting a value between <b>0</b> (zero) and <b>5</b> (five) to the <tt>pyburg.debug</tt> variable before invoquing the code generator.
+
+<H2><a name="spec"></a>9. File specification</H2>
+
+The complete <a href="../exs/sample1.py">specification</a> file for the target language can be found in the <a href="../exs">examples</a> directory.
+
+</body>
+</html>

@@ -1,0 +1,3 @@
+program	# print an integer constant
+  print 2020;
+end

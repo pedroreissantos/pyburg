@@ -1,0 +1,240 @@
+<html>
+<head>
+<title>pyburg (Bottom-Up Rewrite Grammar in python)</title>
+</head>
+<BODY BGCOLOR="B5BDD6" link=red vlink=green>
+
+<h1>pyburg (Bottom-Up Rewrite Grammar in python)</h1>
+
+<b>
+Pedro Reis dos Santos<br>
+University of Lisboa<br>
+(C)IST, 2020<br>
+</b>
+
+<p>
+<b>pyburg-1.0</b>
+<p>
+
+<div class="sectiontoc">
+<ul>
+<li><a href="#intro">Introduction</a></li>
+<li><a href="#high">High-level functions</a></li>
+<li><a href="#rule">Parsing of a grammar rule</a></li>
+<li><a href="#reflect">Grammar reflection</a></li>
+<li><a href="#check">Grammar consistency checking</a></li>
+<li><a href="#labeling">Labeling functions</a></li>
+<li><a href="#reduction">Reduction functions</a></li>
+</ul>
+
+<H2><a name="intro"></a>1. Introduction</H2>
+
+This document aims at providing some insight on all the routines developped for the <b>pyburg</b> module.
+The <a href="#high">high-level functions</a> are called externally by the user.
+The other routines are document to make undestanding of the code smooth and facilitate further changes.
+
+<H2><a name="high"></a>2. High-level functions</H2>
+
+The <a href="#run">run</a> routine is the top level user routine.
+The <a href="#select">select</a> routine is the actual BURG algorithm, and the
+<a href="burg">burg</a>,
+<a href="parse">parse</a> and
+<a href="table">table</a> routines are used to build a grammar from different input formats.
+
+<H3><a name="debug"></a>2.1 Debug</H3>
+
+The <tt>pyburg</tt> package already includes an extensive debug mode to help
+developers.
+A <tt>debug</tt> variable can be set to values ranging from <tt>0</tt>
+produce no debug information, to <tt>5</tt>, the highest debug level.
+<pre>
+pyburg.debug=0 # no debug
+</pre>
+A <tt>debug</tt> value higher than <tt>0</tt> will report errors while
+processing the grammer, no match for start symbol in input processing,
+and print the tree final cost.
+A <tt>debug</tt> value higher than <tt>1</tt> will also print the reduced
+rules and reports a missing <tt>goal</tt> variable or if it unable to produce 
+grammar from the input arguments.
+A <tt>debug</tt> value higher than <tt>2</tt> include labeling information
+about tree node and rules.
+A <tt>debug</tt> value higher than <tt>3</tt> reports costs.
+A <tt>debug</tt> value higher than <tt>4</tt> prints reduce state information and closure setup.
+
+<H3><a name="run"></a>2.2 Run</H3>
+The <tt>run</tt> function is the high level <b>pyburg</b> function, it
+builds all internal data and performs the labeling and reduction of the
+given tree.
+<pre>
+def run(tree, module=None, terms=None, start=None, user=None, output=None):
+</pre>
+The <tt>tree</tt> argument is the root node of the AST. Each node includes
+a <tt>.label()</tt> method that returns the node label and <tt>.left()</tt>
+and <tt>.right()</tt> methods to return the node branches. The branches should be <tt>None</tt> for leaf nodes and unary nodes provide only a left branch.
+The node must be object in order to <b>pyburg</b> to add state information
+to each node.
+<p>
+The <tt>module</tt> argument is a loaded module or <tt>None</tt> if the module
+containing the grammar is the same module in which the <tt>.run()</tt> caller
+resides. The module will be scanned for relavant variables and <tt>b_</tt>
+prefixed functions.
+<p>
+The <tt>terms</tt> argument is a list of terminals symbols, if <tt>None</tt>
+is provided the module variable <tt>terminals</tt> will used.
+If no such variable exists it will determined from the grammar but no
+consistency checking can be performed.
+<p>
+The <tt>start</tt> argument is the grammar start symbol, if <tt>None</tt> is
+provided the module variable <tt>goal</tt> will be used.
+<p>
+The <tt>user</tt> and <tt>output</tt> arguments are any user variable to be
+passed to reduce routines. Their main purpose in code generation is the output
+file (<tt>output</tt>) and the processor instruction set (<tt>user</tt>).
+<p>
+The routine builds the grammar, either from a dictionary (<tt>parse</tt>) or
+from a module (<tt>burg</tt>), loads the required variables (<tt>terminals</tt>, <tt>goal</tt>) and calls the <tt>select</tt> routine.
+
+<H3><a name="select"></a>2.4 Select</H3>
+
+The <tt>select</tt> routine performs the labeling and reduction of a <tt>tree</tt> given a pattern grammar (<tt>gram</tt>).
+The terminals (<tt>terms</tt>) are used to check the grammar.
+The <tt>start</tt> symbol, ot target symbol of the grammar, can extracted from the grammar's left hand side symbol of the first rule.
+The <tt>fdir</tt> is a function dictionary that maps names to functions pointers, used in variable cost rules.
+The <tt>user</tt> and <tt>output</tt> are parameters to be passed to each of the user supplied reduction routines.
+
+<H3><a name="burg"></a>2.4 Burg</H3>
+
+The <tt>burg</tt> routine builds a grammar list of rules from a function dictionary that maps function names to functions pointers.
+From each <tt>b_</tt> prefixed routine in the dictionary, a rule grammar is built.
+The routine provides the docstring containing the rules description.
+The description is parsed by the <tt>rule</tt> routine to extract four items:
+<ol>
+<li>the left hand side non-terminal (string)
+</li><li>the right hand side pattern (pyburg.Tree)
+</li><li>the rule cost (integer)
+</li><li>the action function (function pointer)
+</li>
+</ol>
+
+<H3><a name="parse"></a>2.5 parse</H3>
+
+The <tt>parse</tt> routine, as the previous <tt>burg</tt> routine, also builds a grammar list of rules from a dictionary.
+This dictionary, however, is not extracted from a python module, instead it is built by the user and must contain all the required information.
+In this approach no docstrings are used to describe the rules.
+The dictionary also maps strings to function pointers, but the strings are the rules themselves.
+These rules can be identified by the ':' character in the string, that is not a valid character in a variable or function name.
+Besides the rules, the dictionary must also provide all required information, such as the <tt>goal</tt> and the <tt>terminals</tt> variables or any variable cost functions, all refered by name.
+Am example of such a grammar is depict by the <tt>gram</tt> variable in <a href=../exs/sample4.py">this example</a>.
+
+<H3><a name="table"></a>2.6 Table</H3>
+
+Routine that converts the module based representation used by the <tt>burg</tt> routine into the table based approach used by the <tt>parse</tt> routine.
+
+<H2><a name="rule"></a>3. Parsing of a grammar rule</H2>
+
+The <tt>rule</tt> routine parses a <tt>b_</tt> prefixed routine, extracting its docstring and returning a 4 element tuple that represents the rule (see the <tt>burg</tt> routine for the tuple description).
+The <tt>t_</tt> and <tt>p_</tt> prefixed functions are used to parse the string using <b>ply</b>.
+The variables <tt>func</tt>, <tt>rule_parser</tt> and <tt>rule_lexer</tt> are used for error reporting and to build the parser only once. Building the parsers for each parsed rule would be unnecessarily expensive.
+
+<H2><a name="reflect"></a>4. Reflection parsing functions</H2>
+
+The reflection parsing routines were extract from <b>ply</b>:
+<ol>
+<li><tt>get_caller_module_dict</tt> returns a dictionary of all symbols in the current module at the given depth <tt>level</tt>. The depth depends on nesting level of the calling routine.
+</li><li><tt>entries</tt> returns a dictionary of all symbols in the given module. If no module is given, the above <tt>get:caller_module_dict</tt> is returned.
+</ol>
+
+<H2><a name="check"></a>5. Grammar consistency checking functions</H2>
+
+These functions are used to collect information from the given grammar and perform consistency checks in order to ensure a valid and usable grammar.
+
+<H3><a name="nonterms"></a>5.1 Non-terminals</H3>
+
+<tt>nonterms</tt> returns a dictionary containing a maps from all grammar non-terminal to the number of rules that produce it: rules where the non-terminal is the left hand side of the context free grammar.
+
+<H3><a name="cktree"></a>5.2 Check tree</H3>
+
+<tt>cktree</tt> checks the arity consistency of all terminals in a <tt>rule</tt>.
+A dictionary <tt>term</tt>, with each terminal initially set to <b>-1</b>, contains the number of arguments used with each terminal.
+If the terminal is used with different arities, an error is reported.
+Any missing terminals in the dictionary are also reported.
+Return the number of errors found.
+
+<H3><a name="ckrules"></a>5.3 Check rules</H3>
+
+<tt>ckrules</tt> checks the reachability of all rules, using a dictionary <tt>visit</tt> to map
+non-terminal symbols to <b>1</b> (visited node).
+Also calls <tt>cktree</tt> to check the arity of terminals within each rule.
+Return the number of errors found.
+
+<H3><a name="ckreach"></a>5.4 Check reach</H3>
+
+<tt>ckreach</tt> performs a global check of reachability and arity over the grammar, calling the above routines.
+Report the unreachable non-terminals.
+Return the number of errors found.
+
+<H3><a name="closure"></a>5.5 Check closure</H3>
+
+A closure is a rule that consumes no terminals, for instance: <tt>instr : expr</tt>.
+This <tt>closure</tt> routine builds the <tt>closures</tt> argument, if <tt>None</tt> is given.
+Since this is an expensive step, the <tt>closures</tt> variable is kept for subsequent calls to this routine.
+If the given <tt>node</tt> has closures, the cost (fixed or variable) is determined and associated with the <tt>node.state</tt> of the rule left hand non-terminal symbol.
+
+<H3><a name="terminals"></a>5.6 terminals and findterms</H3>
+
+The <tt>terminals</tt> routine is invoqued when the <tt>terminals</tt> variable
+is not defined in the grammar.
+It extracts all right hand symbols that do not appear in the left hand side, since the grammar is context free.
+This approach, however, invalidates the checking of the declared terminal symbols.
+<p>
+The <tt>findterms</tt> routine acts on the right hand side of a pattern node and, recusively, collects all symbols that are present in the <tt>nts</tt> argument (a list of all right hand side symbols in the grammar, i.e. the grammar non-terminals).
+<p>
+The <tt>terminals</tt> routine iterates over all grammar rules and collects the terminal symbols of each rule, given by the <tt>findterms</tt> routine, into a set to avoid duplicates.
+
+<H2><a name="labeling"></a>6. Labeling functions</H2>
+
+Labeling routines perform the calculation of the minimal costs for each non-terminal symbol in the grammar for every node in the tree.
+A subsequent reduction process will select the lowest cost.
+The labeling process performs a depth first tree scanning.
+
+<H3><a name="sumcosts"></a>6.1 Sum costs</H3>
+Return the sum of costs of every branch of the given <tt>node</tt>.
+
+<H3><a name="match"></a>6.2 Match</H3>
+
+The <tt>match</tt> routine returns <tt>True</tt> if the rule grammar <tt>tree</tt> pattern is matched by the <tt>node</tt>.
+The routine directly checks simple patterns made of leaf nodes and calls <tt>pattern</tt> for trees with branches that must be checked recursively.
+
+<H3><a name="label"></a>6.3 Label</H3>
+
+The <tt>label</tt> routine associates (<tt>setattr</tt>) with each tree node a <tt>state</tt> dictionary.
+This dictionary maps non-terminals that can be derived from the grammar rules from this node to its total cost.
+If non-terminal cannot be derived from this tree node, it does not appear in the dictionary.
+The non-terminals, and the respective costs, are determined by the rules that can be matched from this tree node.
+<p>
+The <tt>label</tt> routine is applied recusively to each node.
+It scans the tree depth first from the root <tt>node</tt> to its leafs setting the <tt>state</tt> attribute to each node.
+The labeling process starts at the leaf nodes and makes it way back to the root node.
+If a match between the current node and a grammar rules can be found, its non-terminal is added to the <tt>state</tt> and mapped to its cost, if the cost is higher than a previous cost for the same non-termninal.
+If closures for this non-terminal exist, the other closure non-terminals must be added to the <tt>state</tt>.
+<p>
+The routine arguments arguments are the tree root's <tt>node</tt>, the grammar /<tt>gram</tt>), the list of terminal symbols in the grammar (<tt>terms</tt>), a function dictionary for variable cost functions (<tt>fdir</tt>) and a <tt>closures</tt> list (see <a href="#closure">closure</a>).
+The routine returns no value, only the tree is labeled with <tt>state</tt> information.
+
+<H2><a name="reduction"></a>7. Reduction functions</H2>
+
+The reduction process selects the lowest cost at each node and executes the code associated with the rule that generated that cost.
+
+<H3><a name="kids"></a>7.1 kids</H3>
+
+Call the <tt>reduce</tt> routine for each node branch (or child/kid) for the pattern of the selected rule.
+When a pattern has a left child (or kid) the node has a left branch, since it was matched by the labeling routine.
+The same occurs for a right child.
+Therefore, by scanning the tree pattern one can also navigate the AST tree node.
+
+<H3><a name="reduce"></a>7.2 reduce</H3>
+
+The reduction main routine <tt>reduce</tt> bootstraps the process for the goal non-terminal symbol (<tt>goalnt</tt>) and invoques the rule's associated user function.
+The goal is redefined by each pattern that is applied when this routine is called by the previous <tt>kids</tt> routine.
+</body>
+</html>

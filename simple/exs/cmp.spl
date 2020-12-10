@@ -1,0 +1,12 @@
+program
+	x = 0;
+	y = 0;
+	read x;
+	read y;
+	print x == y;
+	print x != y;
+	print x < y;
+	print x <= y;
+	print x > y;
+	print x >= y;
+end

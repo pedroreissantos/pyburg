@@ -1,0 +1,26 @@
+program
+  n = 0;
+  a = 0;
+  b = 1;
+  i = 2;
+  print 'Termo da serie de Fibonnacci.';
+  print 'Introduza o termo a calcular: ';
+  read n;
+  if (n <= 2) {
+    print n;
+  } else {
+    while (i <= n) {
+      if (i % 2 == 0) {
+	a = a + b;
+      } else {
+	b = b + a;
+      }
+      i = i + 1;
+    }
+    if (i % 2 == 0) {
+      print b;
+    } else {
+      print a;
+    }
+  }
+end

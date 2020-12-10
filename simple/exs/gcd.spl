@@ -1,0 +1,30 @@
+program	# maior divisor comum entre dois numeros inteiros positivos
+  a = 0;
+  b = 0;
+  read a;
+  read b;
+  if (a <= 0) {
+    print 'Os valores devem ser positivos';
+  } else {
+    if (b <= 0) {
+      print 'Os valores devem ser positivos';
+    } else {
+      d = 1;
+      if (a > b) {
+	m = b;
+      } else {
+	m = a;
+      }
+      i = 2;
+      while (i <= m) {
+	if (a % i == 0) {
+	  if (b % i == 0) {
+	    d = i;
+	  }
+	}
+	i = i + 1;
+      }
+      print d;		# maior divisor comum
+    }
+  }
+end
