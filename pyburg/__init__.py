@@ -1,5 +1,6 @@
 # pyburg package
 # Author: Pedro Reis dos Santos (reis.santos@tecnico.ulisboa.pt)
+# https://github.com/pedroreissantos/pyburg
 # @(c) IST, 2020
 
 __version__ = '1.0'
