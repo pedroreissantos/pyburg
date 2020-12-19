@@ -78,7 +78,7 @@ def b_expr_2(n,pf,out):
 
 def b_expr_3(n,pf,out):
 	''' expr : ADD(expr,expr) 1 '''
-	print(pf['ADD'], file=out)
+	print(pf['ADD']%(), file=out)
 
 def b_expr_4(n,pf,out):
 	''' expr : ADD(INT,INT) 1 '''

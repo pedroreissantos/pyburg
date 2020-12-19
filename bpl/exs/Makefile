@@ -1,7 +1,7 @@
-COMP=../blc
+COMP=python3 ../code.py
 EXT=.b
-LDLIBS=../librun.a
-.SUFFIXES: $(EXT) .brg .asm
+LDLIBS=../../librun.a
+.SUFFIXES: $(EXT) .asm
 #AS=nasm -felf32
 AS=as -o $@
 #LD=ld -melf_i386 # 32-bit binaries in a 64-bit system
@@ -87,4 +87,4 @@ z: z.o char.o
 	$(COMP) $<
 
 clean:
-	rm -f a.out *~ *.o *.asm $(EXE)
+	rm -f a.out *~ *.o *.asm $(EXE) ../parser.out ../parsetab.py ../__pycache__
