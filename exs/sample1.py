@@ -139,7 +139,7 @@ def b_prog_1(n,pf,out):
 
 def b_decls_1(n,pf,out):
 	''' decls : NIL 0 '''
-	print((pf['EXTRN']+pf['EXTRN']+pf['EXTRN']) % ("println", "prints", "printi"), file=out)
+	print((pf['EXTRN']+pf['EXTRN']+pf['EXTRN']) % ("println", "_prints", "_printi"), file=out)
 
 def b_decls_2(n,pf,out):
 	''' decls : DECLS(decls,decl) 0 '''
@@ -167,19 +167,19 @@ def b_instr_1(n,pf,out):
 
 def b_strs_1(n,pf,out):
 	''' strs : EXPR(strs,str) 0 '''
-	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("prints", pf['WORD']), file=out)
+	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("_prints", pf['WORD']), file=out)
 
 def b_strs_2(n,pf,out):
 	''' strs : EXPR(strs,expr) 0 '''
-	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("printi", pf['WORD']), file=out)
+	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("_printi", pf['WORD']), file=out)
 
 def b_strs_3(n,pf,out):
 	''' strs : str 0 '''
-	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("prints", pf['WORD']), file=out)
+	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("_prints", pf['WORD']), file=out)
 
 def b_strs_4(n,pf,out):
 	''' strs : expr 0 '''
-	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("printi", pf['WORD']), file=out)
+	print((pf['ARG1']+pf['CALL']+pf['TRASH']) % ("_printi", pf['WORD']), file=out)
 
 def b_str_1(n,pf,out):
 	''' str : ID isSTR '''

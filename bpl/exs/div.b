@@ -10,7 +10,7 @@ main()
     while (i <= n/2) {
       if (n % i == 0) {
 	putint(n);
-	putstr(" e' divisivel por ");
+	putstr(" divides by ");
 	putint(i);
 	putstr("*n");
 	d = d + 1;
@@ -19,7 +19,7 @@ main()
     }
     if (d == 0) {
       putint(n);
-      putstr(" e' primo.*n");
+      putstr(" is prime.*n");
     }
   }
   return(0);

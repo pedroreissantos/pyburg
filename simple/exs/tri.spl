@@ -1,45 +1,45 @@
-program	# classificador de triângulos
+program	# triangle classifier
 
-  a = 0;		# criar as variáveis
+  a = 0;		# variables
   b = 0;
   c = 0;
 
-  print 'introduza as dimensões do primeiro lado do triângulo: ';
-  read a;		# introduzir as dimensões da 3 faces do triângulo
-  print 'introduza as dimensões do segundo lado do triângulo: ';
+  print 'enter dimension of first side: ';
+  read a;
+  print 'enter dimension of second side: ';
   read b;
-  print 'introduza as dimensões do terceiro lado do triângulo: ';
+  print 'enter dimension of third side: ';
   read c;
 
-  if (a < 1)		# face de comprimento não positivo
-    print 'As dimensões dos lados do triângulo devem ser positivas';
+  if (a < 1)		# sides with negtive dimensions
+    print 'Dimensions must be positive';
   else
     if (b < 1)
-      print 'As dimensões dos lados do triângulo devem ser positivas';
+      print 'Dimensions must be positive';
     else
       if (c < 1)
-	print 'As dimensões dos lados do triângulo devem ser positivas';
+	print 'Dimensions must be positive';
       else
-	if (a + b <= c)
-	  print 'Não e um triângulo';
-	else
-	  if (a + c <= b)
-	    print 'Não e um triângulo';
-	  else
-	    if (c + b <= a)
-	      print 'Não e um triângulo';
-	    else
-	      if (a == b)
-		if (b == c)
-		  print 'Triângulo equilátero';
-		else
-		  print 'Triângulo isósceles';
-	      else
-		if (b == c)
-		  print 'Triângulo isósceles';
-		else
-		  if (a == c)
-		    print 'Triângulo isósceles';
-		  else
-		    print 'Triângulo escaleno';
+        if (a + b <= c)
+          print 'Not a triangle';
+        else
+          if (a + c <= b)
+            print 'Not a triangle';
+          else
+            if (c + b <= a)
+              print 'Not a triangle';
+            else
+              if (a == b)
+                if (b == c)
+                  print 'Triangle equilateral';
+                else
+                  print 'Triangle isosceles';
+              else
+                if (b == c)
+                  print 'Triangle isosceles';
+                else
+                  if (a == c)
+                    print 'Triangle isosceles';
+                  else
+                    print 'Triangle scalene';
 end

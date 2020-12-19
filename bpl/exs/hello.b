@@ -1,5 +1,5 @@
 main() {
   extrn putstr();
-  putstr("olá pessoal!*n");
+  putstr("Hello world!*n");
   return (0);
 }

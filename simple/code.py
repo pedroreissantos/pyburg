@@ -15,11 +15,11 @@ def b_stat_2(n, pf, out):
 	''' stat : STRING 9 '''
 	global lbl
 	lbl += 1
-	print( (pf['RODATA']+pf['ALIGN']+pf['LABEL']+pf['STR']+pf['TEXT']+pf['ADDR']+pf['CALL']+pf['CALL']+pf['TRASH'] ) % ( "_L"+str(lbl), n.text()[1:-1], "_L"+str(lbl), "prints", "println", pf['WORD']), file=out)
+	print( (pf['RODATA']+pf['ALIGN']+pf['LABEL']+pf['STR']+pf['TEXT']+pf['ADDR']+pf['CALL']+pf['CALL']+pf['TRASH'] ) % ( "_L"+str(lbl), n.text()[1:-1], "_L"+str(lbl), "_prints", "println", pf['WORD']), file=out)
 
 def b_stat_3(n, pf, out):
 	''' stat : PRINT(reg) 3 '''
-	print((pf['CALL']+pf['CALL']+pf['TRASH']) % ("printi", "println", pf['WORD']), file=out)
+	print((pf['CALL']+pf['CALL']+pf['TRASH']) % ("_printi", "println", pf['WORD']), file=out)
 
 def b_stat_4(n, pf, out):
 	''' stat : READ 1 '''
@@ -176,7 +176,7 @@ def wrapup(pf,out):
 	print((pf['IMM']+pf['POP']+pf['LEAVE']+pf['RET']+pf['DATA']) % 0, file=out)
 	global tabid
 	for s in tabid: print((pf['LABEL']+pf['CONST']) % (s, 0), file=out)
-	print((pf['EXTRN']+pf['EXTRN']+pf['EXTRN']+pf['EXTRN']) % ("prints", "printi", "println", "readi"), file=out)
+	print((pf['EXTRN']+pf['EXTRN']+pf['EXTRN']+pf['EXTRN']) % ("_prints", "_printi", "println", "readi"), file=out)
 
 def parse(filename):
 	with open(filename, 'r') as file:

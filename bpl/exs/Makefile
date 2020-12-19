@@ -1,6 +1,6 @@
 COMP=python3 ../code.py
 EXT=.b
-LDLIBS=../../librun.a
+LDLIBS=../../run/librun.a
 .SUFFIXES: $(EXT) .asm
 #AS=nasm -felf32
 AS=as -o $@
@@ -84,7 +84,7 @@ z: z.o char.o
 	$(AS) $< -o $@
 
 .b.asm:
-	$(COMP) $<
+	$(COMP) $< $@
 
 clean:
-	rm -f a.out *~ *.o *.asm $(EXE) ../parser.out ../parsetab.py ../__pycache__
+	rm -rf a.out *~ *.o *.asm $(EXE) ../parser.out ../parsetab.py ../__pycache__
