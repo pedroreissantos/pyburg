@@ -1,0 +1,24 @@
+program
+	x = 0;
+	y = 0;
+	read x;
+	read y;
+	print x + y;
+	print x - y;
+	print x * y;
+	print x / y;
+	print x % y;
+	print -x;
+	if (x > y) print 'gt';
+	if (x < y) print 'lt';
+	if (x >= y) print 'ge';
+	if (x <= y) print 'le';
+	if (x == y) print 'eq';
+	if (x != y) print 'ne';
+	print x > y;
+	print x < y;
+	print x >= y;
+	print x <= y;
+	print x == y;
+	print x != y;
+end

@@ -1,0 +1,3 @@
+program	# hello world
+  print 'Hello world!';
+end
