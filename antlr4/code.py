@@ -14,7 +14,7 @@ terminals = tuple(snapParser.symbolicNames)
 lbl = 0
 
 def b_prog_1(node, user, out):
-    '''prog: FILE(decls,instrs)'''
+    '''prog: FILE(decls,instrs) 3'''
     print(" xorq %rax, %rax\n ret", file=out)
 def b_decls_1(node, user, out):
     '''decls: NIL'''
@@ -26,44 +26,44 @@ def b_decl_1(node, user, out):
     '''decl: ASSIGN(ID,STR)'''
     print(".section .rodata\n.align 8\n" + node.left().text() + ": .string " + node.right().text(), file=out)
 def b_decl_2(node, user, out):
-    '''decl: ASSIGN(ID,INT)        '''
+    '''decl: ASSIGN(ID,INT)'''
     print(".section .data\n.align 8\n" + node.left().text() + ": .quad " + node.right().value(), file=out)
 def b_instrs_1(node, user, out):
-    '''instrs: NIL     '''
+    '''instrs: NIL'''
     print(".section .note.GNU-stack,\"\",@progbits\n.section .text\n.align 8\n .globl _main #:function\n_main:", file=out)
 def b_instrs_2(node, user, out):
     '''instrs: SEP(instrs, instr)    '''
     pass # no code between instructions
 def b_instr_1(node, user, out):
-    '''instr: PRINT(strs)  '''
+    '''instr: PRINT(strs)  1'''
     print(" call _println", file=out)
 def b_strs_1(node, user, out):
-    '''strs: COMMA(strs,str) '''
+    '''strs: COMMA(strs,str) 2'''
     print(" movq %rax, %rdi\n call _prints", file=out)
 def b_strs_2(node, user, out):
-    '''strs: COMMA(strs,expr) '''
+    '''strs: COMMA(strs,expr) 2'''
     print(" movq %rax, %rdi\n call _printi", file=out)
 def b_strs_3(node, user, out):
-    '''strs: str '''
+    '''strs: str 2'''
     print(" movq %rax, %rdi\n call _prints", file=out)
 def b_strs_4(node, user, out):
-    '''strs: expr '''
+    '''strs: expr 2'''
     print(" movq %rax, %rdi\n call _printi", file=out)
 def b_str_1(node, user, out):
-    '''str: ID isSTR '''
+    '''str: ID isSTR'''
     print(" leaq " + node.text() + "(%rip), %rax", file=out)
 def b_str_2(node, user, out):
-    '''str: STR '''
+    '''str: STR 1'''
     lbl += 1
     print(".section .rodata\n.align 8\n_" + lbl + ": .string " + node.text() + "\n.section .text\n leaq _" + lbl + "(%rip), %rax", file=out)
 def b_expr_1(node, user, out):
-    '''expr: ID isINT '''
+    '''expr: ID isINT'''
     print(" movq " + node.text() + "(%rip), %rax", file=out)
 def b_expr_2(node, user, out):
-    '''expr: INT 1 '''
+    '''expr: INT 1'''
     print(" movq $" + node.value() + ", %rax", file=out)
 def b_save_1(node, user, out):
-    '''save: expr '''
+    '''save: expr 1'''
     print(" movq %rax, %rbx", file=out)
 def b_expr_3(node, user, out):
     '''expr: ADD(save, expr) 1 '''
@@ -79,9 +79,9 @@ def b_expr_6(node, user, out):
     '''expr: ADD(INT, expr) 1 '''
     print(" addq $" + node.left().value() + ", %rax", file=out)
 def isSTR(p) :
-    return 1 if p.place() == snapParser.STR else MAX_COST
+    return 1 if p.place() == snapParser.STR else 10000
 def isINT(p) :
-    return 1 if p.place() == snapParser.INT else MAX_COST
+    return 1 if p.place() == snapParser.INT else 10000
 
 def main(tree, data, out=stdout):
     tree = main(data)
