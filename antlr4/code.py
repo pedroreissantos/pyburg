@@ -13,6 +13,7 @@ from Snap import main
 goal = 'prog'
 terminals = tuple(snapParser.symbolicNames)
 lbl = 0
+pic = "" # "@GOTPCREL"
 
 def b_prog_1(node, user, out):
     '''prog: FILE(decls,instrs) 2'''
@@ -52,15 +53,15 @@ def b_strs_4(node, user, out):
     print(" movq %rax, %rdi\n call _printi", file=out)
 def b_str_1(node, user, out):
     '''str: ID isSTR'''
-    print(" leaq " + node.text() + "(%rip), %rax", file=out)
+    print(" leaq " + node.text() + pic + "(%rip), %rax", file=out)
 def b_str_2(node, user, out):
     '''str: STR 1'''
     global lbl
     lbl += 1
-    print(".section .rodata\n.align 8\n_" + str(lbl) + ": .string " + node.text() + "\n.section .text\n leaq _" + str(lbl) + "(%rip), %rax", file=out)
+    print(".section .rodata\n.align 8\n_" + str(lbl) + ": .string " + node.text() + "\n.section .text\n leaq _" + str(lbl) + pic + "(%rip), %rax", file=out)
 def b_expr_1(node, user, out):
     '''expr: ID isINT'''
-    print(" movq " + node.text() + "(%rip), %rax", file=out)
+    print(" movq " + node.text() + pic + "(%rip), %rax", file=out)
 def b_expr_2(node, user, out):
     '''expr: INT 1'''
     print(" movq $" + str(node.value()) + ", %rax", file=out)

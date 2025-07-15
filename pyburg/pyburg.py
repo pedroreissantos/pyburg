@@ -217,7 +217,7 @@ def label(node, gram, terms, fdir=None, closures=[]):
 		if match(node, rule[1], terms):
 			if type(rule[2]) == int:
 				cost = rule[2]
-			if rule[2].isnumeric():
+			elif rule[2].isnumeric():
 				cost = int(rule[2])
 			else:
 				cost = int(fdir[ rule[2] ](node))

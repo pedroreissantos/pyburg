@@ -52,15 +52,17 @@ def b_strs_4(node, user, out):
     print(" bl _printi", file=out)
 def b_str_1(node, user, out):
     '''str: ID isSTR'''
-    print(" ldr x0, =" + node.text(), file=out)
+    print(ldr("x0", node.text()), file=out)
 def b_str_2(node, user, out):
     '''str: STR 1'''
     global lbl
     lbl += 1
-    print(".section .rodata\n.align 8\n_" + str(lbl) + ": .string " + node.text() + "\n.section .text\n ldr x0, =_" + str(lbl), file=out)
+    print(".section .rodata\n.align 8\n_" + str(lbl) + ": .string " + node.text() + "\n.section .text\n" + ldr("x0", "_" + str(lbl)), file=out)
 def b_expr_1(node, user, out):
     '''expr: ID isINT'''
-    print(" ldr x0, =" + node.text(), file=out)
+    #print(" ldr x0, =" + node.text(), file=out)
+    print(ldr("x0", node.text()), file=out)
+    print(" ldr x0, [x0]", file=out)
 def b_expr_2(node, user, out):
     '''expr: INT 1'''
     print(" ldr x0, =" + str(node.value()), file=out)
@@ -84,6 +86,9 @@ def isSTR(p) :
     return 1 if p.place() == snapParser.STR else 1000
 def isINT(p) :
     return 1 if p.place() == snapParser.INT else 1000
+def ldr(reg, val):
+    #return " ldr " + reg + ", =" + val
+    return " adrp " + reg + ", :got:" + val + "\n ldr " + reg + ", [" + reg + ", :got_lo12:" + val + "]"
 
 def parse(data, out=stdout):
     tree = main(data)
