@@ -5,7 +5,7 @@ VER=4.13.1
 LIB=$(JARS)/antlr-$(VER)-complete.jar
 JARS=$(HOME)/.local/lib
 
-CC=gcc -static
+CC=gcc
 CFLAGS=-DUNDERSCORE # precede function names with underscore
 PYTHON=python3
 JAVA=java
