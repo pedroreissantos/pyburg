@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
 	readme = fh.read()
 
 setuptools.setup(name='pyburg',
-	version='1.4.1',
+	version='1.4.2',
 	author='Pedro Reis dos Santos',
 	author_email="reis.santos@tecnico.ulisboa.pt",
 	description="A BURG (Bottom-Up Rewrite Grammar) instruction selection compiler generator",
