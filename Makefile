@@ -1,4 +1,5 @@
-PKG=pyburg-pkg-peresan
+#PKG=pyburg-pkg-peresan
+PKG=pyburg
 ENV=test
 REP=testpypi
 all::
