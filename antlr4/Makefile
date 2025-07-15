@@ -14,9 +14,12 @@ ANTLR4=$(JAVA) -Xmx500M -cp $(LIB) org.antlr.v4.Tool -Dlanguage=Python3
 
 all: snap.g4 Snap.py $(CODE).py Tree.py Makefile
 	$(ANTLR4) -visitor snap.g4
+	# bug in ANTLR-4.13.1
+	sed -e "s/\/\/package/#package/" < snapParser.py > aa; mv aa snapParser.py
+	sed -e "s/\/\/package/#package/" < snapLexer.py > aa; mv aa snapLexer.py
 
 test::
-	$(PYTHON) Snap.py xy.snp xy.s
+	$(PYTHON) $(CODE).py xy.snp xy.s
 	$(LINK.c) xy.s libsnp.c -o xy
 	./xy
 

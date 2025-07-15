@@ -57,18 +57,18 @@ class snapVisitor(ParseTreeVisitor):
         #print("prs@expr="+ctx.getText(), ctx.ID(), ctx.INT(), ctx.STR())
         if ctx.ID():
             t = Tree("ID", text=ctx.ID().getText())
+            t.place(snapParser.INT if self.get(ctx.ID().getText()) == "INT" else snapParser.STR)
             #print(" ID", t)
-            t.place(self.get(ctx.ID().getText()))
             return t
         if ctx.INT():
             t = Tree("INT", value=int(ctx.INT().getText()))
-            #print(" INT", t)
             t.place(snapParser.INT)
+            #print(" INT", t)
             return t
         if ctx.STR():
             t = Tree("STR", text=ctx.STR().getText())
-            #print(" STR", t)
             t.place(snapParser.STR)
+            #print(" STR", t)
             return t
         t1 = ctx.expr(0).accept(self)
         t2 = ctx.expr(1).accept(self)

@@ -215,6 +215,8 @@ def label(node, gram, terms, fdir=None, closures=[]):
 	if debug > 2: print("NODE=", node)
 	for rule in gram:
 		if match(node, rule[1], terms):
+			if type(rule[2]) == int:
+				cost = rule[2]
 			if rule[2].isnumeric():
 				cost = int(rule[2])
 			else:
@@ -334,6 +336,7 @@ def run(tree, module=None, terms=None, start=None, user=None, output=None):
 	if not gram:
 		if debug > 1: print("No grammar")
 		return 3
+	if debug > 2: print("Grammar:", gram)
 	if not terms:
 		if 'terminals' in fdir:
 			terms = fdir['terminals']

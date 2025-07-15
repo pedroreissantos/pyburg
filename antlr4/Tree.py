@@ -1,7 +1,7 @@
 '''This module provides a binary tree representation'''
 class Tree:
     '''Tree basic node'''
-    def __init__(self, op, right=None, left=None, value=None, text=None):
+    def __init__(self, op, left=None, right=None, value=None, text=None):
         self.op = op
         self.rgt = right
         self.lft = left
@@ -22,12 +22,20 @@ class Tree:
         if plc is not None:
             self.plc = plc
         return self.plc
-    def __repr__(self):
+    def value(self):
+        return self.val
+    def text(self):
+        return self.txt
+    def string(self, level= 0, labels=None):
         repr = "[ label="+str(self.label())
         if self.lft:
-            repr += ' left=' + str(self.lft)
+            repr += "\n"+" "*(2*level)
+            repr += ' left=' + self.lft.string(level+1)
         if self.rgt:
-            repr += ' right=' + str(self.rgt)
+            repr += "\n"+" "*(2*level)
+            repr += ' right=' + self.rgt.string(level+1)
+        if labels is not None:
+            return repr + "]"
         if self.val:
             repr += ' value=' + str(self.val)
         if self.txt:
@@ -35,3 +43,5 @@ class Tree:
         if self.plc:
             repr += ' place=' + str(self.plc)
         return repr + ']'
+    def __repr__(self):
+        return self.string()
