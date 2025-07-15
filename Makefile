@@ -3,7 +3,8 @@ PKG=pyburg
 ENV=test
 REP=testpypi
 all::
-	python3 setup.py sdist bdist_wheel
+	#python3 setup.py sdist bdist_wheel
+	python3 -m build # pip install build
 install::
 	python3 -m twine upload --repository $(REP) dist/*
 test::
